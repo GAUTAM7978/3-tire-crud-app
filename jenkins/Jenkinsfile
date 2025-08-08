@@ -1,0 +1,35 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Clone') {
+            steps {
+                git 'https://github.com/GAUTAM7978/3-tire-crud-app.git'
+            }
+        }
+        stage('Setup') {
+            steps {
+                echo 'Setting up the environment...'
+                sh 'docker-compose up -d --build'
+            }
+        }
+        stage('Test') {
+            steps {
+                echo 'Running tests...'
+                sh 'docker-compose run backend python manage.py test'
+            }
+        }
+        stage('Build & Deploy') {
+            steps {
+                sh 'docker-compose down --remove-orphans'
+                sh 'docker-compose up --build -d'
+            }
+        }
+        
+    }
+    post {
+        always {
+            echo 'Pipeline finished.'
+        }
+    }
+}
