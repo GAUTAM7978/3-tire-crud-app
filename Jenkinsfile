@@ -1,57 +1,45 @@
-
 pipeline {
     agent any
 
     environment {
-        COMPOSE_PROJECT_NAME = "crud_app"
+        COMPOSE_FILE = "docker-compose.yml"
     }
 
     stages {
-        stage('Clone') {
+        stage('Clone Repository') {
             steps {
-                git branch: 'main', url: 'https://github.com/GAUTAM7978/3-tire-crud-app.git'
+                git 'https://github.com/your-username/3-tier-crud-app.git'
             }
         }
 
-        stage('Build Containers') {
+        stage('Build Images') {
             steps {
-                echo 'Building Docker containers...'
-                sh 'docker-compose -f docker-compose.yml build'
+                sh 'docker-compose build'
+            }
+        }
+
+        stage('Run Containers') {
+            steps {
+                sh 'docker-compose up -d'
             }
         }
 
         stage('Run Migrations') {
             steps {
-                echo 'Running Django migrations...'
-                sh 'docker-compose run web python manage.py migrate'
+                sh 'docker-compose exec web python manage.py migrate'
             }
         }
 
-        stage('Run Tests') {
+        stage('Collect Static Files') {
             steps {
-                echo 'Running Django tests...'
-                sh 'docker-compose run --rm web python manage.py test'
-            }
-        }
-
-        stage('Start App') {
-            steps {
-                echo 'Starting the full stack...'
-                sh 'docker-compose up -d'
+                sh 'docker-compose exec web python manage.py collectstatic --noinput'
             }
         }
     }
 
     post {
         always {
-            echo 'Cleaning up...'
-            sh 'docker-compose down --remove-orphans'
-        }
-        success {
-            echo '✅ Pipeline completed successfully!'
-        }
-        failure {
-            echo '❌ Pipeline failed. Check logs.'
+            echo 'Pipeline completed.'
         }
     }
 }

@@ -1,60 +1,58 @@
 version: '3.8'
 
 services:
-  web:
-    build: ./backend
-    command: sh -c "python manage.py migrate && gunicorn project.wsgi:application --bind 0.0.0.0:8000"
-    volumes:
-      - ./backend:/app
-    expose:
-      - 8000
-    env_file:
-      - ./.env
-    depends_on:
-      - db
-    networks:
-      - backend-net
-
   db:
-    image: mysql:8.0
-    volumes:
-      - mysql-data:/var/lib/mysql
+    image: mysql:8
+    restart: always
+    env_file: .env
     environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    volumes:
+      - db_data:/var/lib/mysql
     networks:
-      - backend-net
+      - backend
+
+  web:
+    build: ./backend
+    restart: always
+    env_file: .env
+    depends_on:
+      - db
+    networks:
+      - backend
+      - frontend
 
   nginx:
-    image: nginx:latest
+    image: nginx:alpine
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
     ports:
       - "80:80"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
     depends_on:
       - web
     networks:
-      - backend-net
+      - frontend
 
-  jenkins:
-    image: jenkins/jenkins:lts
-    privileged: true
-    user: root
+  # Optional phpMyAdmin
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    restart: always
+    environment:
+      PMA_HOST: db
     ports:
-      - "8080:8080"
-      - "50000:50000"
-    volumes:
-      - jenkins-data:/var/jenkins_home
-      - /var/run/docker.sock:/var/run/docker.sock
+      - "8080:80"
+    depends_on:
+      - db
     networks:
-      - jenkins-net
+      - backend
+      - frontend
 
 volumes:
-  mysql-data:
-  jenkins-data:
+  db_data:
 
 networks:
-  backend-net:
-  jenkins-net:
+  backend:
+  frontend:
